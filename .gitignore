@@ -1,0 +1,10 @@
+*.swp
+*.nc
+*.tmp
+*.png
+*.jld2
+*.err
+*.out
+slurm*
+*.log
+*.mp4
