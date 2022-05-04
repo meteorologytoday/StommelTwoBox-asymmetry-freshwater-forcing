@@ -9,10 +9,11 @@ using .StommelModel
 using .NewtonMethod
 using .ContMethod1
 
+scale = 5e-2
 c = 3.6e3
-μ = 7.0
+μ = 5.0
 ν = 1.0
-ξ_vec = collect(range(-1, 10, length=21))
+ξ_vec = collect(range(-1, 1, length=21))
 p_rng = [0.0, 3.0]
 
 m = Model(c=c, μ=μ, ν=ν, p=p_rng[1], ξ=0.0)
@@ -36,7 +37,7 @@ function _F_dFdx_dFdp(x, p)
 end
 
 
-scale = 5e-2
+
 
 cmi = ContMethod1.CMInfo(
     Nx = length(m.x),
@@ -66,7 +67,7 @@ for ξ in ξ_vec
     println("Now do ξ = ", ξ)
 
     m.ξ  = ξ
-    m.p  = p_rng[1]
+    m.p  = p_rng[2]
     m.x .= 0
 
     _F_dFdx = function(x)
@@ -92,7 +93,7 @@ for ξ in ξ_vec
 
     # Now do continuition
     setS!(cmi, s=cmi.s, x=m.x, p=[ m.p ])
-    setS!(cmi, s=cmi.ṡ, x=[0.0 ; 0.0], p=[ 0.01 ])
+    setS!(cmi, s=cmi.ṡ, x=[0.0 ; 0.0], p=[ -0.01 ])
         
     push!(ppp, [m.p, ξ, m.x[1], m.x[2], StommelModel.cal_ψ(m)])
     #ax.scatter3D(m.p, μ, ppp[end][5], marker="*", s=10, color="red")

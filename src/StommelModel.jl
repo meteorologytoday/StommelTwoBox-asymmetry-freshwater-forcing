@@ -14,12 +14,15 @@ module StommelModel
         ξ :: Float64
         x :: AbstractArray{Float64, 1}
 
+        use_Θ :: Bool
+
         function Model(;
                 c,
                 μ,
                 ν,
                 p,
                 ξ,
+                use_Θ = false,
         )
 
             return new(
@@ -29,9 +32,42 @@ module StommelModel
                 p,
                 ξ,
                 zeros(Float64, 2),
+                use_Θ,
             )
         end
     end
+
+
+    function pos(x)
+        return (x + _abs(x, stiffness)) / 2
+    end
+
+    function neg(x)
+        return (x - _abs(x, stiffness)) / 2
+    end
+
+    w = 0.1
+    δ = 0.5
+    c = 0.9
+
+    function cal_Θ(m::Model; p:: Float64=m.p)
+        if m.use_Θ
+            return ( 1 - δ * neg(m.ξ) * 0.5 * (1 + tanh( (p - c) / w )) )
+        else
+            return 1.0
+        end 
+    end
+
+    function cal_dΘ(m::Model; p:: Float64=m.p)
+        d = 1e-7 
+        dΘ =  (cal_Θ(m;p=p+d) - cal_Θ(m;p=p-d)) / (2*d)
+        if ! isfinite(dΘ)
+            throw(ErrorException())
+        end
+        return dΘ
+        #return δ * m.ξ * 0.5 * (1 - ( tanh( (p - c) / w ) )^2 ) * 1/w
+    end
+
 
     function cal_ψ(
         m :: Model;
@@ -39,10 +75,8 @@ module StommelModel
         p :: Float64 = m.p,
 
     )
-
-        return m.μ * (x[1] - x[2]) - m.ν * p * m.ξ 
-        #return m.μ^0.5 * (x[1] - x[2]) - m.ν * p * m.ξ 
-    
+        return m.μ * (x[1] - x[2]) * cal_Θ(m; p=p) - m.ν * p * m.ξ
+        #return m.μ * (x[1] - x[2]) - m.ν * p * m.ξ  
     end
 
 
@@ -87,7 +121,9 @@ module StommelModel
         ψ = cal_ψ(m; x=x, p=p)
         dabsψ = _dabs(ψ, stiffness)
         
-        return dabsψ * ( - m.ν * m.ξ )
+        return dabsψ * ( m.μ * (x[1] - x[2]) * cal_dΘ(m; p=p) -  m.ν * m.ξ )
+        #return - dabsψ *  m.ν * m.ξ * ( step(m;p=p) + p * dstep(m; p=p) )
+
         #return 2 * ψ * ( - m.ν * m.ξ )
 
        
